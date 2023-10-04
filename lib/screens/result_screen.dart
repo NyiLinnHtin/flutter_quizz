@@ -2,25 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quizz/blueprints/question_data.dart';
 
 class ResultScreen extends StatelessWidget {
-  const ResultScreen({super.key, required this.selectedAnswers});
+  const ResultScreen(
+      {super.key, required this.selectedAnswers, required this.resetScreen});
 
   final List<String> selectedAnswers;
-  final int correctAnswer = 0;
-
-  int getCorrectedAnswers() {
-    int correctedAnswers = 0;
-
-    for (int i = 0; i < selectedAnswers.length; i++) {
-      if (selectedAnswers[i] == questions[i].answers[0]) {
-        correctedAnswers++;
-      }
-    }
-    return correctedAnswers;
-  }
+  final void Function() resetScreen;
 
   List<Map<String, Object>> getSummaryData() {
     final List<Map<String, Object>> summaryData = [];
-
     for (int i = 0; i < selectedAnswers.length; i++) {
       summaryData.add({
         "question_index": i,
@@ -35,6 +24,11 @@ class ResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final List<Map<String, Object>> summaryData = getSummaryData();
+    final int correctedAnswers = summaryData.where((data) {
+      return data["correct_answer"] == data["user_answer"];
+    }).length;
+
     return SizedBox(
       width: double.infinity,
       child: Container(
@@ -42,11 +36,11 @@ class ResultScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ResultText(correctedAnswer: getCorrectedAnswers()),
+            ResultText(correctedAnswer: correctedAnswers),
             const SizedBox(height: 30),
-            QuestionAndAnswers(summaryData: getSummaryData()),
+            QuestionAndAnswers(summaryData: summaryData),
             const SizedBox(height: 30),
-            const ResetButton(),
+            ResetButton(resetScreen: resetScreen),
             const SizedBox(height: 30),
           ],
         ),
@@ -63,7 +57,14 @@ class ResultText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-        "You answered $correctedAnswer out of ${questions.length} questions correctly!");
+      textAlign: TextAlign.center,
+      "You answered $correctedAnswer out of ${questions.length} questions correctly!",
+      style: const TextStyle(
+        fontSize: 16,
+        color: Colors.black,
+        fontWeight: FontWeight.bold,
+      ),
+    );
   }
 }
 
@@ -75,38 +76,96 @@ class QuestionAndAnswers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: summaryData.map((data) {
-        return Row(
-          children: [
-            Text(((data["question_index"] as int) + 1).toString()),
-            Expanded(
-              child: Column(
-                children: [
-                  Text(data["question"] as String),
-                  const SizedBox(height: 5),
-                  Text(data["correct_answer"] as String),
-                  const SizedBox(height: 5),
-                  Text(data["user_answer"] as String),
-                ],
-              ),
-            )
-          ],
-        );
-      }).toList(),
+    return SizedBox(
+      height: 300,
+      child: SingleChildScrollView(
+        child: Column(
+          children: summaryData.map((data) {
+            final bool isCorrectAns =
+                data["correct_answer"] == data["user_answer"];
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                NumberText(
+                  qNumber: data["question_index"] as int,
+                  qTrue: isCorrectAns,
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data["question"] as String,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      !isCorrectAns
+                          ? Text(
+                              "Corrected Answer : ${data["correct_answer"].toString()}",
+                              style: const TextStyle(
+                                  color: Colors.lightGreenAccent),
+                            )
+                          : const SizedBox(),
+                      const SizedBox(height: 2),
+                      Text("Your Answer : ${data["user_answer"].toString()}"),
+                      const SizedBox(height: 15),
+                    ],
+                  ),
+                )
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class NumberText extends StatelessWidget {
+  const NumberText({super.key, required this.qNumber, required this.qTrue});
+
+  final int qNumber;
+  final bool qTrue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 30,
+      height: 30,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: qTrue ? Colors.greenAccent : Colors.redAccent,
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Text(
+        (qNumber + 1).toString(),
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
+      ),
     );
   }
 }
 
 //ResetButton >>> Third Component of Result Screen!
 class ResetButton extends StatelessWidget {
-  const ResetButton({super.key});
+  const ResetButton({super.key, required this.resetScreen});
+
+  final void Function() resetScreen;
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: () {},
-      child: const Text("Reset!"),
+    return TextButton.icon(
+      onPressed: resetScreen,
+      style: TextButton.styleFrom(
+        backgroundColor: Colors.lightGreen,
+      ),
+      icon: const Icon(Icons.replay_rounded),
+      label: const Text("Reset!"),
     );
   }
 }
